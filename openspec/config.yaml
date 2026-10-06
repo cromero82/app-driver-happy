@@ -8,7 +8,7 @@ context: |
   ## Producto
   Asistente para un conductor de Uber, inDrive y DiDi en Medellín.
   Repo: app-driver-happy.
-  Corte vigente: lector de texto OCR, precio por km y panel en http://127.0.0.1:3000 (server/). Sin APK y sin Google.
+  Corte vigente: lector, precio por km, panel en http://127.0.0.1:3000 y km de viaje con MAPBOX_ACCESS_TOKEN (si no está, OpenRouteService y luego Google). Sin APK. Sin elevación.
 
   ## Dónde vive cada cosa
   - Comportamiento que el código cumple: openspec/specs/

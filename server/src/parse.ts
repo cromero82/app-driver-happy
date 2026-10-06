@@ -56,6 +56,7 @@ function emptyOffer(app: AppName, priceCop: number): Offer {
     priceCop,
     pickupKm: null,
     tripKm: null,
+    tripKmFromRoute: false,
     pickupMin: null,
     tripMin: null,
     origin: null,

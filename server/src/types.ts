@@ -16,6 +16,7 @@ export interface Offer {
   priceCop: number;
   pickupKm: number | null;
   tripKm: number | null;
+  tripKmFromRoute: boolean;
   pickupMin: number | null;
   tripMin: number | null;
   origin: string | null;

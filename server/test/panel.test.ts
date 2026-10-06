@@ -22,7 +22,9 @@ describe("panel local", () => {
     await withServer(async (base) => {
       const page = await fetch(base + "/");
       assert.equal(page.status, 200);
-      assert.match(await page.text(), /Asistente driver/);
+      const html = await page.text();
+      assert.match(html, /Asistente driver/);
+      assert.match(html, /ruta/);
 
       const fixtures = await fetch(base + "/api/fixtures");
       const list = (await fixtures.json()) as { id: string; label: string }[];

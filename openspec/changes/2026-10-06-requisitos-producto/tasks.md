@@ -4,7 +4,7 @@
 - [ ] Zonas prime iniciales: Poblado, Belén, Envigado, Itagüí, Sabaneta. Zona contigua y zona alejada.
 - [ ] Horas pico: endurecer hacia Negociar si la app no muestra recargo.
 - [ ] Seguridad configurable por zona y horario. Inclinación por elevación en los dos tramos.
-- [ ] Cliente Google en el backend (geocodificar, ruta, elevación) con tope de cuota.
+- [ ] Elevación de la ruta para la inclinación. El km de viaje ya está en `ruta-viaje`.
 - [ ] Captura Android: ocultar la barra propia, OCR, enviar texto.
 - [ ] Vehículo, km/galón, tanqueos y egresos.
 
@@ -13,3 +13,4 @@
 - [x] Lectura de las cuatro pantallas (`lectura-ofertas`).
 - [x] Precio por km y resultado parcial (`decision-precio-km`).
 - [x] Panel local (`panel-local`).
+- [x] Km de viaje por ruta Google (`ruta-viaje`). Sin elevación.

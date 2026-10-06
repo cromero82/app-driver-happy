@@ -90,7 +90,7 @@
         card.append(line("App", offer.app));
         card.append(line("Precio", money.format(offer.priceCop)));
         card.append(line("Recogida", offer.pickupKm == null ? null : offer.pickupKm + " km"));
-        card.append(line("Viaje", offer.tripKm == null ? null : offer.tripKm + " km"));
+        card.append(line("Viaje", offer.tripKm == null ? null : offer.tripKm + " km" + (offer.tripKmFromRoute ? " (ruta)" : "")));
         card.append(line("Origen", offer.origin));
         card.append(line("Destino", offer.destination));
         card.append(line("Precio/km", item.pricePerKm == null ? null : money.format(item.pricePerKm)));

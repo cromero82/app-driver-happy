@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { analyze } from "./analyze.ts";
+import { analyze, completeTrips, type RouteLookup } from "./analyze.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -31,7 +31,7 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-export function createApp() {
+export function createApp(options?: { routes?: RouteLookup }) {
   const indexHtml = readFileSync(join(root, "public/index.html"));
   const fixturesDir = join(root, "test/fixtures");
 
@@ -67,7 +67,7 @@ export function createApp() {
         json(res, 400, { error: "Falta el texto" });
         return;
       }
-      json(res, 200, analyze(payload.text));
+      json(res, 200, await completeTrips(analyze(payload.text), options?.routes));
       return;
     }
     json(res, 404, { error: "No existe" });

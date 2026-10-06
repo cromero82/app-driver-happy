@@ -36,13 +36,13 @@ Si la pantalla no muestra recargo y el reloj está en hora pico, la decisión SH
 - **WHEN** DiDi muestra `x1,3` en hora pico
 - **THEN** no se aplica otro ajuste de hora pico encima de ese factor
 
-### Requirement: Mapas solo en el backend
+### Requirement: Elevación en el backend
 
-Geocodificar, calcular la ruta y consultar la elevación SHALL hacerse con la clave de Google en el servidor. El APK MUST NOT incluir esa clave. MUST NOT pedirse al conductor que inicie sesión con Google para usar el mapa. Si no hay km de viaje en la pantalla, el resultado SHALL seguir parcial hasta que la ruta lo aporte. Si no hay red, MUST NOT inventarse distancia ni pendiente.
+La inclinación SHALL calcularse con la elevación de la ruta en el servidor. El APK MUST NOT incluir la clave de Google. MUST NOT pedirse al conductor que inicie sesión con Google. Si no hay red, MUST NOT inventarse la pendiente.
 
-#### Scenario: inDrive sin km de viaje
-- **WHEN** la tarjeta inDrive no trae el km del viaje y aún no hay respuesta de ruta
-- **THEN** la decisión permanece `parcial`
+#### Scenario: Sin red
+- **WHEN** no hay respuesta de elevación
+- **THEN** no se inventa la inclinación
 
 ### Requirement: Captura en Android
 
