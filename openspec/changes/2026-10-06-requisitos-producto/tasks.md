@@ -6,10 +6,10 @@
 - [ ] Seguridad configurable por zona y horario. Inclinación por elevación en los dos tramos.
 - [ ] Cliente Google en el backend (geocodificar, ruta, elevación) con tope de cuota.
 - [ ] Captura Android: ocultar la barra propia, OCR, enviar texto.
-- [ ] Panel web en el Mac. Hasta entonces no hay URL.
 - [ ] Vehículo, km/galón, tanqueos y egresos.
 
 ## 2. Ya cubierto por specs vigentes
 
 - [x] Lectura de las cuatro pantallas (`lectura-ofertas`).
 - [x] Precio por km y resultado parcial (`decision-precio-km`).
+- [x] Panel local (`panel-local`).

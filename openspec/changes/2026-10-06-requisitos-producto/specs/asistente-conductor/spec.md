@@ -52,14 +52,6 @@ La captura SHALL usar `MediaProjection` con permiso explícito del conductor. La
 - **WHEN** el conductor pulsa capturar y la barra de botones está en pantalla
 - **THEN** la barra se oculta antes de la imagen y no entra al OCR
 
-### Requirement: Panel en el Mac
-
-El panel SHALL mostrar la decisión cuando exista un servidor. Este change MUST NOT declarar una URL ni un puerto: en el corte vigente no hay proceso HTTP. La prueba local SHALL ser `npm test` dentro de `server/`.
-
-#### Scenario: Corte sin panel
-- **WHEN** alguien pide la URL del panel y solo está el lector
-- **THEN** no hay URL; la verificación es la suite de `server/`
-
 ### Requirement: Vehículo y gastos
 
 El vehículo SHALL guardar marca, modelo y cilindrada para un coeficiente km/galón. SHALL poder registrarse tanqueo (fecha y valor), ingreso del día frente a combustible, refrigerio, mantenimiento (llantas, aceite) y egresos fijos (lavado, polichado). El historial SHALL guardar trayecto, distancia, carrera confirmada a mano y ganancia.

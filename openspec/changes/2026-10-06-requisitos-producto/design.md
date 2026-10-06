@@ -21,4 +21,4 @@ Conductor en Medellín. Las ofertas duran segundos. Uber, inDrive y DiDi no comp
 
 ## Non-goals
 
-Los de `proposal.md`. Este diseño no abre un puerto ni entrega una URL.
+Los de `proposal.md`. El panel local ya está en `openspec/specs/panel-local/spec.md`. Este change no agrega otro puerto.

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "tsx src/server.ts",
     "test": "tsx --test test/**/*.test.ts"
   },
   "devDependencies": {

@@ -8,7 +8,7 @@ context: |
   ## Producto
   Asistente para un conductor de Uber, inDrive y DiDi en Medellín.
   Repo: app-driver-happy.
-  Corte vigente: lector de texto OCR y precio por km en server/ (TypeScript). Sin APK, sin Google, sin panel web.
+  Corte vigente: lector de texto OCR, precio por km y panel en http://127.0.0.1:3000 (server/). Sin APK y sin Google.
 
   ## Dónde vive cada cosa
   - Comportamiento que el código cumple: openspec/specs/
@@ -32,7 +32,7 @@ rules:
 operations:
   apply:
     guidance:
-      - El corte vigente se prueba con npm test en server/. No hay URL.
+      - El panel local es http://127.0.0.1:3000 (`npm start` en server/). La suite es `npm test`.
       - No inventar distancia ni precio si el dato no está en la pantalla.
   archive:
     guidance:

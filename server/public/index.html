@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asistente driver</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: #f4f5f7; color: #1c1c1c; }
+    header { padding: 16px 20px; background: #111; color: #fff; }
+    header p { margin: 4px 0 0; color: #c8c8c8; font-size: 14px; }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+    section { background: #fff; border-radius: 12px; padding: 16px; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    .fixtures { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    button { border: 0; border-radius: 8px; padding: 8px 12px; background: #e7e7ea; cursor: pointer; }
+    button.primary { background: #111; color: #fff; }
+    textarea { width: 100%; min-height: 320px; box-sizing: border-box; border: 1px solid #d0d0d4; border-radius: 8px; padding: 10px; font: 13px/1.4 ui-monospace, monospace; }
+    .error { color: #9b1c1c; }
+    article { border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .decision { display: inline-block; border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+    .aceptar { background: #d9f5e5; color: #0d6b3c; }
+    .negociar { background: #fff3d6; color: #8a5a00; }
+    .parcial { background: #ececef; color: #444; }
+    .no { background: #fde2e2; color: #9b1c1c; }
+    .meta { color: #555; font-size: 14px; margin: 6px 0; }
+    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Asistente driver</strong>
+    <p>Pega el texto de la captura o carga una de las cuatro pantallas.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Captura</h2>
+      <div id="fixtures" class="fixtures"></div>
+      <textarea id="text" placeholder="Texto OCR"></textarea>
+      <p><button id="analyze" class="primary" type="button">Analizar</button></p>
+      <p id="error" class="error"></p>
+    </section>
+    <section>
+      <h2>Decisión</h2>
+      <div id="result"></div>
+    </section>
+  </main>
+  <script>
+    const text = document.querySelector("#text");
+    const result = document.querySelector("#result");
+    const error = document.querySelector("#error");
+    const screens = {
+      uber_sheet: "Uber",
+      indrive_list: "inDrive",
+      didi_list: "DiDi lista",
+      didi_modal: "DiDi emergente",
+      unknown: "No reconocida"
+    };
+    const decisions = { aceptar: "Aceptar", negociar: "Negociar", parcial: "Parcial", no: "No" };
+    const labels = { oferta: "Oferta", justo: "Justo", optimo: "Óptimo" };
+    const money = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+
+    function line(label, value) {
+      const p = document.createElement("p");
+      p.className = "meta";
+      p.textContent = value == null || value === "" ? label + ": sin dato" : label + ": " + value;
+      return p;
+    }
+
+    function render(data) {
+      result.replaceChildren();
+      const head = document.createElement("p");
+      head.className = "meta";
+      head.textContent = "Pantalla: " + (screens[data.screen] || data.screen);
+      result.append(head);
+      if (!data.offers.length) {
+        const empty = document.createElement("p");
+        empty.textContent = "No hay ofertas.";
+        result.append(empty);
+        return;
+      }
+      for (const item of data.offers) {
+        const card = document.createElement("article");
+        const badge = document.createElement("span");
+        badge.className = "decision " + item.decision;
+        badge.textContent = decisions[item.decision] || item.decision;
+        card.append(badge);
+        const offer = item.offer;
+        if (offer.passengerName) card.append(line("Usuario", offer.passengerName));
+        card.append(line("App", offer.app));
+        card.append(line("Precio", money.format(offer.priceCop)));
+        card.append(line("Recogida", offer.pickupKm == null ? null : offer.pickupKm + " km"));
+        card.append(line("Viaje", offer.tripKm == null ? null : offer.tripKm + " km"));
+        card.append(line("Origen", offer.origin));
+        card.append(line("Destino", offer.destination));
+        card.append(line("Precio/km", item.pricePerKm == null ? null : money.format(item.pricePerKm)));
+        card.append(line("Etiqueta", labels[item.priceLabel] || null));
+        if (item.reasons.length) card.append(line("Motivo", item.reasons.join(". ")));
+        result.append(card);
+      }
+    }
+
+    async function loadFixtures() {
+      const response = await fetch("/api/fixtures");
+      const list = await response.json();
+      const box = document.querySelector("#fixtures");
+      for (const item of list) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = item.label;
+        button.addEventListener("click", async () => {
+          error.textContent = "";
+          const loaded = await fetch("/api/fixtures/" + item.id);
+          const payload = await loaded.json();
+          text.value = payload.text;
+          await analyze();
+        });
+        box.append(button);
+      }
+    }
+
+    async function analyze() {
+      error.textContent = "";
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: text.value })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        result.replaceChildren();
+        error.textContent = payload.error || "No se pudo analizar";
+        return;
+      }
+      render(payload);
+    }
+
+    document.querySelector("#analyze").addEventListener("click", analyze);
+    loadFixtures();
+  </script>
+</body>
+</html>

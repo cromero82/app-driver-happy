@@ -1,6 +1,6 @@
 ## Why
 
-El corte vigente solo lee texto y calcula precio por km. El requisito del conductor (modos, zonas, seguridad, pendiente, mapas, captura en Android y panel) tiene que quedar escrito sin presentarse como comportamiento ya cumplido.
+El corte vigente lee texto, calcula precio por km y muestra el panel local. El resto del requisito (modos, zonas, seguridad, pendiente, mapas, captura en Android y gastos) queda escrito sin presentarse como comportamiento ya cumplido.
 
 ## What Changes
 
@@ -12,7 +12,7 @@ El corte vigente solo lee texto y calcula precio por km. El requisito del conduc
 
 ### New Capabilities
 
-- `asistente-conductor`: modos, zona prime, horas pico, seguridad, inclinación, Google en el backend, captura Android, panel en el Mac, vehículo y gastos. Aceptar sigue siendo manual.
+- `asistente-conductor`: modos, zona prime, horas pico, seguridad, inclinación, Google en el backend, captura Android, vehículo y gastos. Aceptar sigue siendo manual. El panel local ya está en `specs/panel-local`.
 
 ### Modified Capabilities
 
@@ -20,8 +20,8 @@ El corte vigente solo lee texto y calcula precio por km. El requisito del conduc
 
 ## Impact
 
-- Aún no hay archivos de producto fuera de `server/` (lector y tests).
-- No hay proceso HTTP ni URL.
+- El panel local vive en `server/` (`npm start`, http://127.0.0.1:3000).
+- Este change no abre otro servicio.
 
 ## Non-goals
 
