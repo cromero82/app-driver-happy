@@ -27,6 +27,6 @@ El corte vigente lee texto, calcula precio por km y muestra el panel local. El r
 
 - Publicar en Play Store. La app Android se instala con APK.
 - Aceptar la carrera desde esta app.
-- Calcular seguridad o pendiente con un modelo generativo.
+- Calcular seguridad o pendiente con un modelo generativo en `main`. En `google-ia` esa decisión pasa a Gemini; ver `openspec/changes/2026-10-06-modo-gemini/`.
 - Mostrar el mapa de Google al conductor.
 - Gastos, combustible, modos y mapas dentro del corte que ya pasó los tests de lectura.

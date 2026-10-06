@@ -8,7 +8,11 @@ context: |
   ## Producto
   Asistente para un conductor de Uber, inDrive y DiDi en Medellín.
   Repo: app-driver-happy.
-  Corte vigente: lector, precio por km, panel en http://127.0.0.1:3000, km de viaje con MAPBOX_ACCESS_TOKEN (si no está, OpenRouteService y luego Google), modos, zona prime, seguridad y hora pico. Sin APK. Sin elevación.
+  Corte vigente en main: lector, precio por km, panel en http://127.0.0.1:3000, km de viaje con MAPBOX_ACCESS_TOKEN (si no está, OpenRouteService y luego Google), modos, zona prime, seguridad por geometría y hora pico. Sin APK. Sin elevación. Ese corte es determinístico.
+
+  ## Ramas
+  - main: motor determinístico. Geocodificación, ruta, zonas.geojson y reglas fijas. No usa un modelo generativo para decidir.
+  - google-ia: modo Gemini, no determinístico. La misma captura puede no repetir la misma decisión. Es la rama de trabajo de la próxima sesión. La clave de la API de Google todavía no está comprada; el código de esta rama no debe volver al motor de main mientras se espera la clave.
 
   ## Dónde vive cada cosa
   - Comportamiento que el código cumple: openspec/specs/
@@ -22,7 +26,7 @@ context: |
 
 rules:
   proposal:
-    - Incluir Non-goals (tienda Play, aceptar solo, IA generativa para seguridad o pendiente).
+    - Incluir Non-goals (tienda Play, aceptar solo). En main, la IA generativa no decide seguridad ni pendiente. En google-ia, Gemini sí decide.
     - Separar lo ya cubierto por specs/ de lo que el change propone.
   design:
     - Nombrar la pantalla (uber_sheet, indrive_list, didi_list, didi_modal) y el archivo de umbrales.
