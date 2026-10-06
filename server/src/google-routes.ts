@@ -28,6 +28,7 @@ export interface GeocodeAttempt {
   streetNumber: string | null;
   plate: string | null;
   neighborhood: string | null;
+  mustInclude?: string[];
 }
 
 export function foldPlace(value: string): string {
@@ -96,8 +97,28 @@ export function geocodeAttempts(address: string): GeocodeAttempt[] {
       neighborhood,
     });
   };
+  const crossing = source.match(
+    /\b(calle|cl\.?|cra\.?|carrera|av\.?|avenida|dg\.?|diagonal|transversal|circular)\s+(\d+[a-z]*)\s+con\s+(calle|cl\.?|cra\.?|carrera|av\.?|avenida|dg\.?|diagonal|transversal|circular)\s+(\d+[a-z]*)/i,
+  );
+  if (crossing) {
+    const body = [`${crossing[1]} ${crossing[2]} y ${crossing[3]} ${crossing[4]}`, city?.name, "Antioquia"]
+      .filter(Boolean)
+      .join(", ");
+    attempts.push({
+      query: body,
+      city: city?.name ?? null,
+      proximity: city?.proximity ?? "-75.5812,6.2442",
+      streetNumber: null,
+      plate: null,
+      neighborhood: null,
+      mustInclude: [crossing[2].toLowerCase(), crossing[4].toLowerCase()],
+    });
+    return attempts;
+  }
   if (street && city) push([street, city.name]);
-  if (poi && city) push([poi, neighborhood, city.name]);
+  const extraNeighborhood =
+    neighborhood && poi && !foldPlace(poi).includes(foldPlace(neighborhood)) ? neighborhood : null;
+  if (poi && city) push([poi, extraNeighborhood, city.name]);
   if (neighborhood && city) push([neighborhood, city.name]);
   if (street && neighborhood && city) push([street, neighborhood, city.name]);
   if (attempts.length === 0) push([source]);

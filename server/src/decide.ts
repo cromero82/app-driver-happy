@@ -20,6 +20,9 @@ export function evaluate(offer: Offer, config: Thresholds = thresholds): Evaluat
       decision: "parcial",
       partial: true,
       reasons,
+      safety: null,
+      incline: null,
+      priority: null,
     };
   }
 
@@ -32,6 +35,9 @@ export function evaluate(offer: Offer, config: Thresholds = thresholds): Evaluat
       decision: "negociar",
       partial: false,
       reasons: ["Precio por km bajo"],
+      safety: null,
+      incline: null,
+      priority: null,
     };
   }
   if (pricePerKm >= config.optimoMinCopPerKm) {
@@ -42,6 +48,9 @@ export function evaluate(offer: Offer, config: Thresholds = thresholds): Evaluat
       decision: "aceptar",
       partial: false,
       reasons: [],
+      safety: null,
+      incline: null,
+      priority: null,
     };
   }
   return {
@@ -51,5 +60,8 @@ export function evaluate(offer: Offer, config: Thresholds = thresholds): Evaluat
     decision: "aceptar",
     partial: false,
     reasons: [],
+    safety: null,
+    incline: null,
+    priority: null,
   };
 }

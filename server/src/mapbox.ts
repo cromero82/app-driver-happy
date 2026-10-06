@@ -1,4 +1,4 @@
-import type { RouteLookup } from "./analyze.ts";
+import type { RouteLookup, TripRoute } from "./analyze.ts";
 import {
   firstStreetNumber,
   foldPlace,
@@ -41,6 +41,10 @@ function acceptable(feature: MapboxFeature, attempt: GeocodeAttempt): boolean {
   if (attempt.city && !foldPlace(name).includes(foldPlace(attempt.city))) return false;
   const types = feature.place_type ?? [];
   if (types.some((type) => type === "place" || type === "region" || type === "country")) return false;
+  if (attempt.mustInclude?.length) {
+    const folded = foldPlace(name);
+    return attempt.mustInclude.every((token) => new RegExp(`(?<!\\d)${token}(?!\\d)`, "i").test(folded));
+  }
   if (attempt.plate) return compact(name).includes(compact(attempt.plate));
   if (attempt.streetNumber) {
     const got = firstStreetNumber(name);
@@ -230,22 +234,51 @@ async function suffixGeocode(
   return { lng: feature.center[0], lat: feature.center[1] };
 }
 
+async function driving(
+  from: LatLng,
+  to: LatLng,
+  token: string,
+  fetchImpl: typeof fetch,
+  geometry: boolean,
+): Promise<TripRoute | null> {
+  const path = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+  const url = new URL(`https://api.mapbox.com/directions/v5/mapbox/driving/${path}`);
+  url.searchParams.set("access_token", token);
+  url.searchParams.set("overview", geometry ? "full" : "false");
+  if (geometry) url.searchParams.set("geometries", "geojson");
+  const response = await fetchImpl(url);
+  if (!response.ok) return null;
+  const body = (await response.json()) as {
+    routes?: { distance?: number; geometry?: { type?: string; coordinates?: [number, number][] } }[];
+  };
+  const route = body.routes?.[0];
+  if (route?.distance == null) return null;
+  const line = route.geometry;
+  return {
+    km: kmFromMeters(route.distance),
+    line:
+      line?.type === "LineString" && line.coordinates
+        ? { type: "LineString", coordinates: line.coordinates }
+        : { type: "LineString", coordinates: [] },
+  };
+}
+
 export function mapboxRouteLookup(token: string, fetchImpl: typeof fetch = fetch): RouteLookup {
   return {
     async tripKm(origin, destination) {
       const from = await geocode(origin, token, fetchImpl);
       const to = await geocode(destination, token, fetchImpl);
       if (!from || !to) return null;
-      const path = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-      const url = new URL(`https://api.mapbox.com/directions/v5/mapbox/driving/${path}`);
-      url.searchParams.set("access_token", token);
-      url.searchParams.set("overview", "false");
-      const response = await fetchImpl(url);
-      if (!response.ok) return null;
-      const body = (await response.json()) as { routes?: { distance?: number }[] };
-      const meters = body.routes?.[0]?.distance;
-      if (meters == null) return null;
-      return kmFromMeters(meters);
+      const routed = await driving(from, to, token, fetchImpl, false);
+      return routed?.km ?? null;
+    },
+    async tripRoute(origin, destination) {
+      const from = await geocode(origin, token, fetchImpl);
+      const to = await geocode(destination, token, fetchImpl);
+      if (!from || !to) return null;
+      const routed = await driving(from, to, token, fetchImpl, true);
+      if (!routed || routed.line.coordinates.length < 2) return null;
+      return routed;
     },
   };
 }

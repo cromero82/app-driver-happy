@@ -1,0 +1,142 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "La Candelaria - referencia estadística",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "rojo",
+        "radioMetros": 500,
+        "nota": "Referencia por concentración de delitos; no usar para rechazar toda la comuna."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.568,
+          6.248
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Manrique - referencia estadística",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "rojo",
+        "radioMetros": 500,
+        "nota": "Referencia por homicidios y otros delitos reportados; no usar para rechazar toda la comuna."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.548,
+          6.276
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Aranjuez - referencia estadística",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "rojo",
+        "radioMetros": 500,
+        "nota": "Referencia por homicidios y delitos reportados; no usar para rechazar toda la comuna."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.559,
+          6.281
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Castilla - referencia estadística",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "amarillo",
+        "radioMetros": 500,
+        "nota": "Referencia por conteos de delitos; no usar como zona roja completa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.574,
+          6.291
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Barrio Trinidad / Barrio Antioquia - referencia de investigación",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "rojo",
+        "radioMetros": 400,
+        "nota": "Referencia periodística; requiere validación oficial y geometría precisa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.577,
+          6.235
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Santo Domingo Savio - referencia de pendiente y precaución",
+        "modo": "referencia_no_operativa",
+        "seguridad_referencia": "rojo",
+        "radioMetros": 300,
+        "nota": "Referencia personal/provisional; validar punto o polígono y pendiente real antes de activar."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.5401,
+          6.2995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Santo Domingo Savio",
+        "modo": "operativa",
+        "activo": true,
+        "seguridad": "rojo",
+        "radioMetros": 200
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.541638,
+          6.294727
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "EJEMPLO OPERATIVO - reemplazar coordenadas",
+        "modo": "operativa",
+        "activo": false,
+        "seguridad": "rojo",
+        "radioMetros": 100,
+        "nota": "Solo activar después de validar el punto exacto."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.55,
+          6.28
+        ]
+      }
+    }
+  ]
+}

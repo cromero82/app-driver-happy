@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyze, completeTrips, type RouteLookup } from "./analyze.ts";
+import { applyContext, parseDriverContext } from "./modes.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -56,9 +57,9 @@ export function createApp(options?: { routes?: RouteLookup }) {
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/analyze") {
-      let payload: { text?: unknown };
+      let payload: { text?: unknown; context?: unknown; at?: unknown };
       try {
-        payload = JSON.parse(await readBody(req)) as { text?: unknown };
+        payload = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; at?: unknown };
       } catch {
         json(res, 400, { error: "JSON inválido" });
         return;
@@ -67,7 +68,13 @@ export function createApp(options?: { routes?: RouteLookup }) {
         json(res, 400, { error: "Falta el texto" });
         return;
       }
-      json(res, 200, await completeTrips(analyze(payload.text), options?.routes));
+      let analysis = await completeTrips(analyze(payload.text), options?.routes);
+      const context = parseDriverContext(payload.context);
+      if (context) {
+        const now = typeof payload.at === "string" ? new Date(payload.at) : new Date();
+        analysis = applyContext(analysis, context, Number.isNaN(now.getTime()) ? new Date() : now);
+      }
+      json(res, 200, analysis);
       return;
     }
     json(res, 404, { error: "No existe" });

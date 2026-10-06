@@ -11,6 +11,12 @@ export type PriceLabel = "oferta" | "justo" | "optimo";
 
 export type Decision = "aceptar" | "no" | "negociar" | "parcial";
 
+export type SafetyLevel = "rojo" | "amarillo" | "verde";
+
+export type InclineLevel = "muy_alta" | "alta" | "media" | "normal";
+
+export type DriverMode = "saliendo" | "en_zona_prime" | "retornando";
+
 export interface Offer {
   app: AppName;
   priceCop: number;
@@ -36,6 +42,9 @@ export interface Evaluation {
   decision: Decision;
   partial: boolean;
   reasons: string[];
+  safety: SafetyLevel | null;
+  incline: InclineLevel | null;
+  priority: string | null;
 }
 
 export interface Analysis {

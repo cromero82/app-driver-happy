@@ -1,9 +1,10 @@
 ## 1. Aún no implementado
 
-- [ ] Modos saliendo, en zona prime y retornando, con prioridad `Alta (motivo)`.
-- [ ] Zonas prime iniciales: Poblado, Belén, Envigado, Itagüí, Sabaneta. Zona contigua y zona alejada.
-- [ ] Horas pico: endurecer hacia Negociar si la app no muestra recargo.
-- [ ] Seguridad configurable por zona y horario. Inclinación por elevación en los dos tramos.
+- [x] Modos saliendo, en zona prime y retornando, con prioridad `Alta (motivo)`.
+- [x] Zonas prime iniciales: Poblado, Belén, Envigado, Itagüí, Sabaneta. Zona contigua y zona alejada.
+- [x] Horas pico: endurecer hacia Negociar si la app no muestra recargo.
+- [x] Seguridad configurable por zona y horario.
+- [ ] Inclinación por elevación en los dos tramos.
 - [ ] Elevación de la ruta para la inclinación. El km de viaje ya está en `ruta-viaje`.
 - [ ] Captura Android: ocultar la barra propia, OCR, enviar texto.
 - [ ] Vehículo, km/galón, tanqueos y egresos.

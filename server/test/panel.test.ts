@@ -25,6 +25,9 @@ describe("panel local", () => {
       const html = await page.text();
       assert.match(html, /Asistente driver/);
       assert.match(html, /ruta/);
+      assert.match(html, /En zona prime/);
+      assert.match(html, /Sin evaluación/);
+      assert.doesNotMatch(html, /Zona roja/);
 
       const fixtures = await fetch(base + "/api/fixtures");
       const list = (await fixtures.json()) as { id: string; label: string }[];
