@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  Language: spanish
+  All artifacts must be written in spanish.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  ## Producto
+  Asistente para un conductor de Uber, inDrive y DiDi en Medellín.
+  Repo: app-driver-happy.
+  Corte vigente: lector de texto OCR y precio por km en server/ (TypeScript). Sin APK, sin Google, sin panel web.
+
+  ## Dónde vive cada cosa
+  - Comportamiento que el código cumple: openspec/specs/
+  - Requisito de producto aún no implementado: openspec/changes/2026-10-06-requisitos-producto/
+  - Narrativa de origen: promp-inicial.md (no es el contrato; el contrato es este árbol).
+
+  ## Stack previsto
+  - Android: Kotlin (captura, barra, GPS, OCR).
+  - Mac: TypeScript. Umbrales en server/src/thresholds.ts.
+  - Mapas: Geocoding, Routes y Elevation en el backend. La clave no va en el APK.
+
+rules:
+  proposal:
+    - Incluir Non-goals (tienda Play, aceptar solo, IA generativa para seguridad o pendiente).
+    - Separar lo ya cubierto por specs/ de lo que el change propone.
+  design:
+    - Nombrar la pantalla (uber_sheet, indrive_list, didi_list, didi_modal) y el archivo de umbrales.
+  tasks:
+    - No marcar hecha una tarea de panel, Android o Google mientras no exista el código.
+
+operations:
+  apply:
+    guidance:
+      - El corte vigente se prueba con npm test en server/. No hay URL.
+      - No inventar distancia ni precio si el dato no está en la pantalla.
+  archive:
+    guidance:
+      - Al archivar, pasar los delta a openspec/specs/ solo si el código y los tests ya los cumplen.
