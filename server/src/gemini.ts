@@ -131,12 +131,13 @@ function lineaPrompt(
       : "Una entrada por oferta, en el orden dado.",
     readImage
       ? "Solo estos campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), inclinacion (muy_alta, alta, media o plana), recogida_min, recogida_km, viaje_min, viaje_km, precio_pantalla."
-      : "Solo estos campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), inclinacion (muy_alta, alta, media o plana).",
+      : "Solo estos campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), inclinacion (muy_alta, alta, media o plana), precio_pantalla.",
     "seguridad e inclinacion son obligatorias.",
     "Rojo o muy_alta: recomendacion no. Alta: recomendacion negociar.",
     "Si no hay nombre de pasajero, usuario null. No lo inventes.",
-    readImage ? "recogida_min, recogida_km, viaje_min y viaje_km solo si están escritos. Si no están, null. No los calcules. precio_pantalla es el precio visible." : "",
-    readImage ? "No motivo. No copies las direcciones." : "No precios. No motivo. No copies las direcciones.",
+    "precio_pantalla es el precio escrito en la captura. Si no está, null.",
+    readImage ? "recogida_min, recogida_km, viaje_min y viaje_km solo si están escritos. Si no están, null. No los calcules." : "",
+    "No motivo. No copies las direcciones.",
     "Solo JSON.",
   ].filter(Boolean);
   if (offers) lines.push(JSON.stringify({ ofertas: offers }));
@@ -313,6 +314,7 @@ function applyShort(
     offer: {
       ...item.offer,
       passengerName: vista === "linea" ? item.offer.passengerName : item.offer.passengerName ?? (found?.usuario?.trim() || null),
+      priceCop: item.offer.priceCop > 0 ? item.offer.priceCop : (cop(found?.precio_pantalla) ?? 0),
       pickupKm: item.offer.pickupKm ?? kmOf(found?.recogida_km),
       tripKm: item.offer.tripKmFromRoute ? item.offer.tripKm : (item.offer.tripKm ?? kmOf(found?.viaje_km)),
       pickupMin: item.offer.pickupMin ?? minOf(found?.recogida_min),

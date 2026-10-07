@@ -194,10 +194,17 @@
       return pickup || trip;
     }
 
-    function usuarioText(item) {
-      if (item.offer.passengerName) return item.offer.passengerName;
-      if (item.offer.priceCop) return money.format(item.offer.priceCop);
-      return "sin dato";
+    function usuarioField(item) {
+      const name = item.offer.passengerName || "";
+      const price = item.offer.priceCop ? money.format(item.offer.priceCop) : "";
+      const el = field("usuario", "", name || price || "sin dato");
+      if (name && price) {
+        const line = document.createElement("small");
+        line.className = "km";
+        line.textContent = price;
+        el.append(line);
+      }
+      return el;
     }
 
     function legText(min, km, approx) {
@@ -229,7 +236,7 @@
         decision.append(dist);
       }
       card.append(
-        field("usuario", "", usuarioText(item)),
+        usuarioField(item),
         decision,
         field("seg-" + (item.safety || "none"), "Seguridad", safety[item.safety] || "Sin evaluación"),
         field("inc-" + (item.incline || "none"), "Inclinación", incline[item.incline] || "Sin evaluación"),
@@ -343,7 +350,7 @@
         button.type = "button";
         button.textContent = item.label;
         button.addEventListener("click", async () => {
-          error.textContent = "";
+          clearPanel();
           const loaded = await fetch("/api/fixtures/" + item.id);
           const payload = await loaded.json();
           text.value = payload.text;
@@ -399,7 +406,25 @@
       return document.querySelector("#ocr-mode").value === "local";
     }
 
+    function clearResult() {
+      lastData = null;
+      result.replaceChildren();
+      error.textContent = "";
+    }
+
+    function clearPanel() {
+      text.value = "";
+      capture = null;
+      clearResult();
+      preview.removeAttribute("src");
+      preview.classList.remove("show");
+      ocrStatus.className = "";
+      ocrStatus.textContent = "";
+      resetClock();
+    }
+
     async function analyze() {
+      clearResult();
       const owned = startClock(localOcr() ? elapsedIa : elapsed, localOcr() ? "IA" : "");
       if (localOcr()) elapsedIa.hidden = false;
       error.textContent = "";
@@ -440,6 +465,7 @@
     const ocrStatus = document.querySelector("#ocr-status");
     document.querySelector("#ocr").addEventListener("click", () => image.click());
     async function useCapture(mime, data, previewSrc) {
+      clearResult();
       const local = localOcr();
       const owned = startClock(elapsed, local ? "Extracción" : "");
       if (local) {
@@ -495,6 +521,7 @@
       const file = image.files && image.files[0];
       image.value = "";
       if (!file) return;
+      clearPanel();
       const dataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -506,7 +533,7 @@
       await useCapture(file.type || "image/jpeg", encoded.slice(comma + 1), URL.createObjectURL(file));
     });
     document.querySelector("#phone").addEventListener("click", async () => {
-      error.textContent = "";
+      clearPanel();
       ocrStatus.className = "busy";
       ocrStatus.textContent = "Capturando teléfono";
       const response = await fetch("/api/phone", { method: "POST" });
@@ -523,18 +550,7 @@
     document.querySelector("#vista").addEventListener("change", () => {
       if (text.value.trim() || capture) analyze();
     });
-    document.querySelector("#clear").addEventListener("click", () => {
-      text.value = "";
-      capture = null;
-      lastData = null;
-      result.replaceChildren();
-      error.textContent = "";
-      preview.removeAttribute("src");
-      preview.classList.remove("show");
-      ocrStatus.className = "";
-      ocrStatus.textContent = "";
-      resetClock();
-    });
+    document.querySelector("#clear").addEventListener("click", clearPanel);
     loadFixtures();
   </script>
 </body>
