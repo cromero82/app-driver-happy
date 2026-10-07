@@ -234,6 +234,81 @@ describe("juicio Gemini", () => {
     assert.equal(judged.offers[0].suggested, null);
   });
 
+  it("linea pide solo usuario, decisión, seguridad e inclinación", async () => {
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      const sent = JSON.parse(String(init?.body)) as {
+        contents: { parts: { text?: string }[] }[];
+        generationConfig?: { maxOutputTokens?: number };
+      };
+      const prompt = sent.contents[0].parts[0].text ?? "";
+      assert.match(prompt, /Solo estos campos: usuario, recomendacion/);
+      assert.doesNotMatch(prompt, /precio_oferta/);
+      assert.doesNotMatch(prompt, /Prime:/);
+      assert.doesNotMatch(prompt, /motivo: máximo/);
+      assert.equal(sent.generationConfig?.maxOutputTokens, 500);
+      const body = [{ indice: 0, usuario: "Solecito", recomendacion: "aceptar", seguridad: "amarillo", sector: "Nazaret", inclinacion: "alta" }];
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(body) }] } }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const judged = await judgeWithGemini(
+      analyze(text),
+      { mode: "saliendo", home: null, contiguousZones: ["Laureles"], distantZones: [] },
+      "clave",
+      fetchImpl,
+      null,
+      false,
+      "linea",
+    );
+    assert.equal(judged.offers[0].offer.passengerName, "Solecito");
+    assert.equal(judged.offers[0].decision, "negociar");
+    assert.equal(judged.offers[0].safety, "amarillo");
+    assert.equal(judged.offers[0].incline, "alta");
+    assert.equal(judged.offers[0].suggested, null);
+    assert.deepEqual(judged.offers[0].reasons, []);
+  });
+
+  it("reducida pide precios y no el motivo", async () => {
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      const sent = JSON.parse(String(init?.body)) as {
+        contents: { parts: { text?: string }[] }[];
+        generationConfig?: { maxOutputTokens?: number };
+      };
+      const prompt = sent.contents[0].parts[0].text ?? "";
+      assert.match(prompt, /precio_oferta, precio_justo, precio_extra/);
+      assert.doesNotMatch(prompt, /Prime:/);
+      assert.doesNotMatch(prompt, /motivo: máximo/);
+      assert.equal(sent.generationConfig?.maxOutputTokens, 650);
+      const body = [{
+        indice: 0,
+        recomendacion: "aceptar",
+        seguridad: "verde",
+        sector: "Sabaneta",
+        inclinacion: "plana",
+        precio_oferta: 7000,
+        precio_justo: 9500,
+        precio_extra: 11500,
+      }];
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(body) }] } }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const judged = await judgeWithGemini(
+      analyze(text),
+      { mode: "saliendo", home: null, contiguousZones: ["Laureles"], distantZones: [] },
+      "clave",
+      fetchImpl,
+      null,
+      false,
+      "reducida",
+    );
+    assert.equal(judged.offers[0].decision, "aceptar");
+    assert.equal(judged.offers[0].suggested?.oferta, 7000);
+    assert.equal(judged.offers[0].suggested?.extra, 11500);
+  });
+
   it("si thinkingLevel minimal responde 400 reintenta en low", async () => {
     let calls = 0;
     const fetchImpl: typeof fetch = async (_url, init) => {

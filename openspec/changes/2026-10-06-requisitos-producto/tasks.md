@@ -6,7 +6,8 @@
 - [x] Seguridad configurable por zona y horario.
 - [ ] Inclinación por elevación en los dos tramos.
 - [ ] Elevación de la ruta para la inclinación. El km de viaje ya está en `ruta-viaje`.
-- [ ] Captura Android: ocultar la barra propia, OCR, enviar texto.
+- [x] Teléfono en el Mac: `adb` toma la pantalla y el panel la analiza. La imagen del teléfono se ve con `scrcpy`.
+- [ ] Captura en el APK: `MediaProjection`, ocultar la barra propia, OCR en el teléfono.
 - [ ] Vehículo, km/galón, tanqueos y egresos.
 
 ## 2. Ya cubierto por specs vigentes

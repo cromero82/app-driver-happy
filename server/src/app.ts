@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyze, completeTrips, type RouteLookup } from "./analyze.ts";
 import { GeminiError, judgeImage, judgeWithGemini, transcribeImage, type CaptureImage } from "./gemini.ts";
+import { adbRunner, capturePhone, macSeesPhone, PhoneError, type PhoneRunner } from "./phone.ts";
 import { applyContext, parseDriverContext } from "./modes.ts";
 import type { Analysis } from "./types.ts";
 
@@ -45,6 +46,7 @@ export function createApp(options?: {
   routes?: RouteLookup;
   geminiApiKey?: string;
   fetchImpl?: typeof fetch;
+  phone?: PhoneRunner;
 }) {
   const indexHtml = readFileSync(join(root, "public/index.html"));
   const fixturesDir = join(root, "test/fixtures");
@@ -67,6 +69,15 @@ export function createApp(options?: {
         return;
       }
       json(res, 200, { id, text: readFileSync(join(fixturesDir, found.file), "utf8") });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/phone") {
+      try {
+        json(res, 200, await capturePhone(options?.phone ?? adbRunner(), options?.phone ? undefined : macSeesPhone));
+      } catch (error) {
+        const message = error instanceof PhoneError ? error.message : "No se pudo capturar el teléfono";
+        json(res, 502, { error: message });
+      }
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/ocr") {
@@ -107,6 +118,7 @@ export function createApp(options?: {
         at?: unknown;
         ocr?: unknown;
         compacto?: unknown;
+        vista?: unknown;
         image?: { mime?: unknown; data?: unknown };
       };
       try {
@@ -118,6 +130,7 @@ export function createApp(options?: {
       const image = captureImage(payload.image);
       const remote = payload.ocr !== "local";
       const compact = payload.compacto === true;
+      const vista = payload.vista === "linea" || payload.vista === "reducida" ? payload.vista : "completa";
       const text = typeof payload.text === "string" ? payload.text : "";
       if (text.trim() === "" && !(remote && image)) {
         json(res, 400, { error: "Falta el texto" });
@@ -128,9 +141,9 @@ export function createApp(options?: {
       try {
         const parsed = analyze(text);
         if (image && options?.geminiApiKey && (remote || parsed.offers.length === 0)) {
-          analysis = await judgeImage(context, options.geminiApiKey, image, options.fetchImpl, compact);
+          analysis = await judgeImage(context, options.geminiApiKey, image, options.fetchImpl, compact, vista);
         } else if (options?.geminiApiKey) {
-          analysis = await judgeWithGemini(parsed, context, options.geminiApiKey, options.fetchImpl, image, compact);
+          analysis = await judgeWithGemini(parsed, context, options.geminiApiKey, options.fetchImpl, image, compact, vista);
         } else {
           analysis = await completeTrips(parsed, options?.routes);
         }

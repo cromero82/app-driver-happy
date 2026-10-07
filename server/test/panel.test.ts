@@ -30,6 +30,10 @@ describe("panel local", () => {
       assert.match(html, /Imagen \(prueba\)/);
       assert.match(html, /Remoto/);
       assert.match(html, /id="elapsed"/);
+      assert.match(html, /id="clear"/);
+      assert.match(html, /id="vista"/);
+      assert.match(html, /Linea/);
+      assert.match(html, /Reducida/);
       assert.match(html, /id="elapsed-ia"/);
       assert.match(html, /Extracción/);
       assert.match(html, /id="compacto"/);

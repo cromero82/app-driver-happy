@@ -27,16 +27,48 @@
     textarea { width: 100%; min-height: 320px; box-sizing: border-box; border: 1px solid #d0d0d4; border-radius: 8px; padding: 10px; font: 13px/1.4 ui-monospace, monospace; }
     .error { color: #9b1c1c; }
     article { border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-    .decision { display: inline-block; border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+    .decision { display: inline-block; border-radius: 999px; padding: 2px 10px; font-weight: 700; margin-right: 8px; }
     .aceptar { background: #d9f5e5; color: #0d6b3c; }
     .negociar { background: #fff3d6; color: #8a5a00; }
     .parcial { background: #ececef; color: #444; }
     .no { background: #fde2e2; color: #9b1c1c; }
+    article.reduced { display: flex; gap: 6px; align-items: stretch; padding: 8px; }
+    .reduced .field {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+      border: 0;
+      border-radius: 10px;
+      margin: 0;
+      padding: 8px 4px;
+      font: 700 13px/1.2 system-ui, sans-serif;
+      text-align: center;
+      cursor: default;
+    }
+    .reduced .field small { font-size: 10px; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; opacity: 0.8; }
+    .reduced .field.usuario { background: transparent; color: #000; appearance: none; }
+    .reduced .field .km { font-size: 11px; font-weight: 650; letter-spacing: 0; text-transform: none; opacity: 0.9; }
+    .field.seg-verde { background: #d9f5e5; color: #0d6b3c; }
+    .field.seg-amarillo { background: #fff3d6; color: #8a5a00; }
+    .field.seg-rojo { background: #fde2e2; color: #9b1c1c; }
+    .field.seg-none, .field.inc-none { background: #ececef; color: #444; }
+    .field.inc-plana { background: #e5f7f4; color: #0c6b62; }
+    .field.inc-media { background: #e7f0fb; color: #1d4e89; }
+    .field.inc-alta { background: #ffe8d6; color: #9a4b08; }
+    .field.viaje, .field.distancia { background: #eef1f4; color: #1c1c1c; }
     .meta { color: #555; font-size: 14px; margin: 6px 0; }
     .context { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: center; margin-bottom: 12px; }
     .context label { font-size: 14px; }
     .context input, .context select { border: 1px solid #d0d0d4; border-radius: 8px; padding: 8px; font: inherit; }
-    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+      article.reduced { gap: 4px; padding: 6px; }
+      .reduced .field { font-size: 12px; padding: 8px 3px; }
+    }
   </style>
 </head>
 <body>
@@ -73,6 +105,13 @@
           <option value="false" selected>false</option>
           <option value="true">true</option>
         </select>
+        <label for="vista">Vista</label>
+        <select id="vista">
+          <option value="linea" selected>Linea</option>
+          <option value="reducida">Reducida</option>
+          <option value="completa">Completa</option>
+        </select>
+        <button id="phone" class="trial" type="button">Teléfono</button>
         <button id="ocr" class="trial" type="button">Imagen (prueba)</button>
         <input id="image" type="file" accept="image/*" hidden>
         <img id="preview" class="preview" alt="">
@@ -81,7 +120,10 @@
         <span id="elapsed-ia" hidden></span>
       </div>
       <textarea id="text" placeholder="Texto OCR"></textarea>
-      <p><button id="analyze" class="primary" type="button">Analizar</button></p>
+      <p>
+        <button id="analyze" class="primary" type="button">Analizar</button>
+        <button id="clear" type="button">Clear</button>
+      </p>
       <p id="error" class="error"></p>
     </section>
     <section>
@@ -100,7 +142,7 @@
       didi_modal: "DiDi emergente",
       unknown: "No reconocida"
     };
-    const decisions = { aceptar: "Aceptar", negociar: "Negociar", parcial: "Parcial", no: "No" };
+    const decisions = { aceptar: "SI", negociar: "Negociar", parcial: "Parcial", no: "NO" };
     const labels = { oferta: "Oferta", justo: "Justo", optimo: "Óptimo" };
     const safety = { rojo: "Rojo", amarillo: "Amarillo", verde: "Verde" };
     const incline = { muy_alta: "Muy alta", alta: "Alta", media: "Media", plana: "Plana" };
@@ -120,7 +162,120 @@
       return p;
     }
 
+    function badge(item) {
+      const el = document.createElement("span");
+      el.className = "decision " + item.decision;
+      el.textContent = decisions[item.decision] || item.decision;
+      return el;
+    }
+
+    function safetyText(item) {
+      if (!item.safety) return null;
+      return safety[item.safety] + (item.sector ? " (" + item.sector + ")" : "");
+    }
+
+    function field(kind, label, value) {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "field " + kind;
+      if (label) {
+        const cap = document.createElement("small");
+        cap.textContent = label;
+        el.append(cap);
+      }
+      el.append(document.createTextNode(value));
+      return el;
+    }
+
+    function captureDistance(offer) {
+      const pickup = offer.pickupKm == null ? null : kmBit(offer.pickupKm, true);
+      const trip = offer.tripKm != null && !offer.tripKmFromRoute ? kmBit(offer.tripKm, false) : null;
+      if (trip && pickup) return trip + " / " + pickup;
+      return pickup || trip;
+    }
+
+    function usuarioText(item) {
+      if (item.offer.passengerName) return item.offer.passengerName;
+      if (item.offer.priceCop) return money.format(item.offer.priceCop);
+      return "sin dato";
+    }
+
+    function legText(min, km, approx) {
+      const kmText = km == null ? null : kmBit(km, approx);
+      const minText = typeof min === "number" ? min + " min" : min || null;
+      if (minText && kmText) return minText + " (" + kmText + ")";
+      return kmText || minText;
+    }
+
+    function viajeExtra(offer) {
+      const age = offer.offerAge && /min/i.test(offer.offerAge) ? offer.offerAge.replace(/\.$/, "") : null;
+      const pickupMin = offer.pickupMin != null ? offer.pickupMin : offer.tripMin == null ? age : null;
+      const pickup = legText(pickupMin, offer.pickupKm, offer.app === "indrive");
+      const trip = offer.tripKmFromRoute ? null : legText(offer.tripMin, offer.tripKm, false);
+      if (trip) return { kind: "viaje", label: "Viaje", value: pickup ? pickup + " · " + trip : trip };
+      if (pickup) return { kind: "distancia", label: "Distancia", value: pickup };
+      return null;
+    }
+
+    function lineaCard(item) {
+      const card = document.createElement("article");
+      card.className = "reduced";
+      const decision = field("decision " + item.decision, "", decisions[item.decision] || item.decision);
+      const km = captureDistance(item.offer);
+      if (km) {
+        const dist = document.createElement("small");
+        dist.className = "km";
+        dist.textContent = km;
+        decision.append(dist);
+      }
+      card.append(
+        field("usuario", "", usuarioText(item)),
+        decision,
+        field("seg-" + (item.safety || "none"), "Seguridad", safety[item.safety] || "Sin evaluación"),
+        field("inc-" + (item.incline || "none"), "Inclinación", incline[item.incline] || "Sin evaluación"),
+      );
+      const extra = viajeExtra(item.offer);
+      if (extra) card.append(field(extra.kind, extra.label, extra.value));
+      return card;
+    }
+
+    const kmFormat = new Intl.NumberFormat("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const pesos = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+    function kmBit(value, approx) {
+      if (value == null) return null;
+      return (approx ? "~" : "") + kmFormat.format(value) + " km";
+    }
+    function distanceText(offer) {
+      const trip = kmBit(offer.tripKm, false);
+      const pickup = kmBit(offer.pickupKm, true);
+      if (trip && pickup) return trip + " / " + pickup;
+      return trip || pickup || "sin dato";
+    }
+    function priceText(suggested) {
+      if (!suggested) return "sin dato";
+      const bit = (label, amount) => label + ": " + (amount == null ? "sin dato" : "$" + pesos.format(amount));
+      return [bit("Oferta", suggested.oferta), bit("Justo", suggested.justo), bit("Extra", suggested.extra)].join(" | ");
+    }
+
+    function reducedCard(item) {
+      const card = document.createElement("article");
+      const name = document.createElement("p");
+      name.textContent = item.offer.passengerName || "sin dato";
+      const row = document.createElement("p");
+      row.append(badge(item));
+      row.append(document.createTextNode(
+        " Distancia: " + distanceText(item.offer) +
+        "   Seguridad: " + (safetyText(item) || "Sin evaluación") +
+        "   Inclinación: " + (incline[item.incline] || "Sin evaluación") +
+        "   Precios: " + priceText(item.suggested)
+      ));
+      card.append(name, row);
+      return card;
+    }
+
+    let lastData = null;
     function render(data) {
+      lastData = data;
       result.replaceChildren();
       const head = document.createElement("p");
       head.className = "meta";
@@ -133,9 +288,20 @@
         return;
       }
       const compact = document.querySelector("#compacto").value === "true";
+      const vista = document.querySelector("#vista").value;
       for (const item of data.offers) {
+        if (vista === "linea") {
+          result.append(lineaCard(item));
+          continue;
+        }
+        if (vista === "reducida") {
+          result.append(reducedCard(item));
+          continue;
+        }
         const card = document.createElement("article");
         if (compact) {
+          card.append(badge(item));
+          card.append(line("Usuario", item.offer.passengerName));
           card.append(line("Origen", item.offer.origin));
           card.append(line("Destino", item.offer.destination));
           card.append(evaluated("Sector", item.sector));
@@ -144,10 +310,7 @@
           result.append(card);
           continue;
         }
-        const badge = document.createElement("span");
-        badge.className = "decision " + item.decision;
-        badge.textContent = decisions[item.decision] || item.decision;
-        card.append(badge);
+        card.append(badge(item));
         const offer = item.offer;
         if (offer.passengerName) card.append(line("Usuario", offer.passengerName));
         card.append(line("App", offer.app));
@@ -158,8 +321,7 @@
         card.append(line("Destino", offer.destination));
         card.append(line("Precio/km", item.pricePerKm == null ? null : money.format(item.pricePerKm)));
         card.append(line("Etiqueta", labels[item.priceLabel] || null));
-        const safetyText = item.safety ? safety[item.safety] + (item.sector ? " (" + item.sector + ")" : "") : null;
-        card.append(evaluated("Seguridad", safetyText));
+        card.append(evaluated("Seguridad", safetyText(item)));
         card.append(evaluated("Inclinación", incline[item.incline]));
         if (item.suggested) {
           const quote = item.suggested;
@@ -225,6 +387,14 @@
       paintClock();
       clockStart = 0;
     }
+    function resetClock() {
+      clearInterval(clockTimer);
+      clockStart = 0;
+      clockLabel = "";
+      elapsed.textContent = "";
+      elapsedIa.textContent = "";
+      elapsedIa.hidden = true;
+    }
     function localOcr() {
       return document.querySelector("#ocr-mode").value === "local";
     }
@@ -248,6 +418,7 @@
           },
           ocr: document.querySelector("#ocr-mode").value,
           compacto: document.querySelector("#compacto").value === "true",
+          vista: document.querySelector("#vista").value,
           image: capture
         })
       });
@@ -268,10 +439,7 @@
     const preview = document.querySelector("#preview");
     const ocrStatus = document.querySelector("#ocr-status");
     document.querySelector("#ocr").addEventListener("click", () => image.click());
-    image.addEventListener("change", async () => {
-      const file = image.files && image.files[0];
-      image.value = "";
-      if (!file) return;
+    async function useCapture(mime, data, previewSrc) {
       const local = localOcr();
       const owned = startClock(elapsed, local ? "Extracción" : "");
       if (local) {
@@ -280,19 +448,11 @@
       }
       error.textContent = "";
       try {
-      preview.src = URL.createObjectURL(file);
+      preview.src = previewSrc;
       preview.classList.add("show");
       ocrStatus.className = "busy";
       ocrStatus.textContent = "Leyendo imagen";
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("lectura"));
-        reader.readAsDataURL(file);
-      });
-      const encoded = String(dataUrl);
-      const comma = encoded.indexOf(",");
-      capture = { mime: file.type || "image/jpeg", data: encoded.slice(comma + 1) };
+      capture = { mime, data };
       if (!local) {
         text.value = "";
         ocrStatus.textContent = "Enviando imagen";
@@ -307,7 +467,7 @@
       const response = await fetch("/api/ocr", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mime: file.type || "image/jpeg", data: encoded.slice(comma + 1) }),
+        body: JSON.stringify({ mime, data }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -330,8 +490,51 @@
       } finally {
         stopClock(owned);
       }
+    }
+    image.addEventListener("change", async () => {
+      const file = image.files && image.files[0];
+      image.value = "";
+      if (!file) return;
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("lectura"));
+        reader.readAsDataURL(file);
+      });
+      const encoded = String(dataUrl);
+      const comma = encoded.indexOf(",");
+      await useCapture(file.type || "image/jpeg", encoded.slice(comma + 1), URL.createObjectURL(file));
+    });
+    document.querySelector("#phone").addEventListener("click", async () => {
+      error.textContent = "";
+      ocrStatus.className = "busy";
+      ocrStatus.textContent = "Capturando teléfono";
+      const response = await fetch("/api/phone", { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) {
+        ocrStatus.className = "";
+        ocrStatus.textContent = "";
+        error.textContent = payload.error || "No se pudo capturar el teléfono";
+        return;
+      }
+      await useCapture(payload.mime, payload.data, "data:" + payload.mime + ";base64," + payload.data);
     });
     document.querySelector("#analyze").addEventListener("click", analyze);
+    document.querySelector("#vista").addEventListener("change", () => {
+      if (text.value.trim() || capture) analyze();
+    });
+    document.querySelector("#clear").addEventListener("click", () => {
+      text.value = "";
+      capture = null;
+      lastData = null;
+      result.replaceChildren();
+      error.textContent = "";
+      preview.removeAttribute("src");
+      preview.classList.remove("show");
+      ocrStatus.className = "";
+      ocrStatus.textContent = "";
+      resetClock();
+    });
     loadFixtures();
   </script>
 </body>

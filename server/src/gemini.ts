@@ -26,8 +26,13 @@ interface RawJudgment {
   precio_oferta?: number | string | null;
   precio_justo?: number | string | null;
   precio_extra?: number | string | null;
+  viaje_km?: number | string | null;
+  recogida_min?: number | string | null;
+  viaje_min?: number | string | null;
   motivo?: string | null;
 }
+
+export type JudgeView = "linea" | "reducida" | "completa";
 
 export interface CaptureImage {
   mime: string;
@@ -112,6 +117,56 @@ function compactPrompt(
     "No compares modo ni zona. No evalúes precios.",
     "Solo JSON.",
   ].filter(Boolean);
+  if (offers) lines.push(JSON.stringify({ ofertas: offers }));
+  return lines.join("\n");
+}
+
+function lineaPrompt(
+  offers?: { indice: number; usuario: string | null; origen: string | null; destino: string | null }[],
+  readImage = !offers,
+): string {
+  const lines = [
+    readImage
+      ? "Lee la captura. Una entrada por tarjeta, en orden de lectura."
+      : "Una entrada por oferta, en el orden dado.",
+    readImage
+      ? "Solo estos campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), inclinacion (muy_alta, alta, media o plana), recogida_min, recogida_km, viaje_min, viaje_km, precio_pantalla."
+      : "Solo estos campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), inclinacion (muy_alta, alta, media o plana).",
+    "seguridad e inclinacion son obligatorias.",
+    "Rojo o muy_alta: recomendacion no. Alta: recomendacion negociar.",
+    "Si no hay nombre de pasajero, usuario null. No lo inventes.",
+    readImage ? "recogida_min, recogida_km, viaje_min y viaje_km solo si están escritos. Si no están, null. No los calcules. precio_pantalla es el precio visible." : "",
+    readImage ? "No motivo. No copies las direcciones." : "No precios. No motivo. No copies las direcciones.",
+    "Solo JSON.",
+  ].filter(Boolean);
+  if (offers) lines.push(JSON.stringify({ ofertas: offers }));
+  return lines.join("\n");
+}
+
+function reducidaPrompt(
+  offers?: {
+    indice: number;
+    usuario: string | null;
+    origen: string | null;
+    destino: string | null;
+    precio_pantalla: number | null;
+    recogida_km: number | null;
+  }[],
+  readImage = !offers,
+): string {
+  const lines = [
+    readImage
+      ? "Lee la captura. Una entrada por tarjeta, en orden de lectura."
+      : "Una entrada por oferta, en el orden dado.",
+    readImage
+      ? "Campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), sector (el barrio), inclinacion (muy_alta, alta, media o plana), recogida_km, viaje_km, precio_oferta, precio_justo, precio_extra."
+      : "Campos: usuario, recomendacion (aceptar, negociar o no), seguridad (rojo, amarillo o verde), sector (el barrio), inclinacion (muy_alta, alta, media o plana), precio_oferta, precio_justo, precio_extra.",
+    "sector es el barrio del destino, o el de mayor riesgo entre origen y destino.",
+    "seguridad e inclinacion son obligatorias.",
+    "Rojo o muy_alta: recomendacion no. Alta: recomendacion negociar.",
+    "No motivo. No copies las direcciones.",
+    "Solo JSON.",
+  ];
   if (offers) lines.push(JSON.stringify({ ofertas: offers }));
   return lines.join("\n");
 }
@@ -245,6 +300,38 @@ function applyCompact(item: Analysis["offers"][number], found: RawJudgment | und
   };
 }
 
+function applyShort(
+  item: Analysis["offers"][number],
+  found: RawJudgment | undefined,
+  vista: "linea" | "reducida",
+): Analysis["offers"][number] {
+  const safety = found ? safetyOf(found.seguridad) : null;
+  const incline = found ? inclineOf(found.inclinacion) : null;
+  const decision = decisionForIncline(decisionOf(found?.recomendacion), incline, safety);
+  return {
+    ...item,
+    offer: {
+      ...item.offer,
+      passengerName: vista === "linea" ? item.offer.passengerName : item.offer.passengerName ?? (found?.usuario?.trim() || null),
+      pickupKm: item.offer.pickupKm ?? kmOf(found?.recogida_km),
+      tripKm: item.offer.tripKmFromRoute ? item.offer.tripKm : (item.offer.tripKm ?? kmOf(found?.viaje_km)),
+      pickupMin: item.offer.pickupMin ?? minOf(found?.recogida_min),
+      tripMin: item.offer.tripMin ?? minOf(found?.viaje_min),
+    },
+    decision,
+    partial: decision === "parcial",
+    safety,
+    incline,
+    sector: found?.sector?.trim() || null,
+    suggested:
+      vista === "reducida"
+        ? { oferta: cop(found?.precio_oferta), justo: cop(found?.precio_justo), extra: cop(found?.precio_extra) }
+        : null,
+    priority: null,
+    reasons: [],
+  };
+}
+
 function applyJudgment(item: Analysis["offers"][number], found: RawJudgment | undefined): Analysis["offers"][number] {
   if (!found) {
     return { ...item, decision: "parcial", partial: true, reasons: [...item.reasons, "Gemini no juzgó esta oferta"] };
@@ -279,8 +366,35 @@ export async function judgeWithGemini(
   fetchImpl: typeof fetch = fetch,
   image?: CaptureImage | null,
   compact = false,
+  vista: JudgeView = "completa",
 ): Promise<Analysis> {
   if (analysis.offers.length === 0) return analysis;
+  if (vista === "linea" || vista === "reducida") {
+    const promptText = vista === "linea"
+      ? lineaPrompt(analysis.offers.map((item, index) => ({
+          indice: index,
+          usuario: item.offer.passengerName,
+          origen: item.offer.origin,
+          destino: item.offer.destination,
+        })))
+      : reducidaPrompt(analysis.offers.map((item, index) => ({
+          indice: index,
+          usuario: item.offer.passengerName,
+          origen: item.offer.origin,
+          destino: item.offer.destination,
+          precio_pantalla: item.offer.priceCop,
+          recogida_km: item.offer.pickupKm,
+        })));
+    const text = await generate(apiKey, [{ text: promptText }], fetchImpl, true, vista === "linea" ? 500 : 650);
+    const raw = judgments(text);
+    return {
+      ...analysis,
+      offers: analysis.offers.map((item, index) => {
+        const found = raw.find((row) => row.indice === index) ?? raw[index];
+        return applyShort(item, found, vista);
+      }),
+    };
+  }
   if (compact) {
     const offers = analysis.offers.map((item, index) => ({
       indice: index,
@@ -358,6 +472,13 @@ function kmOf(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function minOf(value: number | string | null | undefined): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  if (typeof value !== "string") return null;
+  const match = value.match(/\d+/);
+  return match ? Number(match[0]) : null;
+}
+
 function screenOf(offers: Evaluation[]): ScreenKind {
   const app = offers[0]?.offer.app;
   if (app === "uber") return "uber_sheet";
@@ -377,7 +498,45 @@ function remotePrompt(context: DriverContext | null): string {
   ].join("\n");
 }
 
-function evaluationFromImage(row: RawJudgment, compact: boolean): Evaluation {
+function evaluationFromImage(row: RawJudgment, compact: boolean, vista: JudgeView = "completa"): Evaluation {
+  if (vista === "linea" || vista === "reducida") {
+    const safety = safetyOf(row.seguridad);
+    const incline = inclineOf(row.inclinacion);
+    const decision = decisionForIncline(decisionOf(row.recomendacion), incline, safety);
+    const offer: Offer = {
+      app: appName(row.app),
+      priceCop: vista === "linea" ? (cop(row.precio_pantalla) ?? 0) : 0,
+      pickupKm: vista === "linea" || vista === "reducida" ? kmOf(row.recogida_km) : null,
+      tripKm: vista === "linea" || vista === "reducida" ? kmOf(row.viaje_km) : null,
+      tripKmFromRoute: false,
+      pickupMin: minOf(row.recogida_min),
+      tripMin: minOf(row.viaje_min),
+      origin: null,
+      destination: null,
+      surge: null,
+      stopsWithoutAddress: 0,
+      distanceComplete: false,
+      offerAge: null,
+      counterOffersCop: [],
+      passengerName: row.usuario?.trim() || null,
+    };
+    return {
+      offer,
+      pricePerKm: null,
+      priceLabel: null,
+      decision,
+      partial: decision === "parcial",
+      reasons: [],
+      safety,
+      incline,
+      priority: null,
+      sector: row.sector?.trim() || null,
+      suggested:
+        vista === "reducida"
+          ? { oferta: cop(row.precio_oferta), justo: cop(row.precio_justo), extra: cop(row.precio_extra) }
+          : null,
+    };
+  }
   const offer: Offer = {
     app: compact ? "indrive" : appName(row.app),
     priceCop: compact ? 0 : (cop(row.precio_pantalla) ?? 0),
@@ -425,18 +584,20 @@ export async function judgeImage(
   image: CaptureImage,
   fetchImpl: typeof fetch = fetch,
   compact = false,
+  vista: JudgeView = "completa",
 ): Promise<Analysis> {
+  const short = vista === "linea" || vista === "reducida";
   const text = await generate(
     apiKey,
     [
       { inlineData: { mimeType: image.mime, data: image.data } },
-      { text: compact ? compactPrompt() : remotePrompt(context) },
+      { text: short ? (vista === "linea" ? lineaPrompt() : reducidaPrompt()) : compact ? compactPrompt() : remotePrompt(context) },
     ],
     fetchImpl,
     true,
-    compact ? 1200 : 900,
+    short ? (vista === "linea" ? 800 : 800) : compact ? 1200 : 900,
   );
-  const offers = judgments(text).map((row) => evaluationFromImage(row, compact));
+  const offers = judgments(text).map((row) => evaluationFromImage(row, compact, vista));
   return { screen: screenOf(offers), offers };
 }
 
