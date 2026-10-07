@@ -13,7 +13,7 @@ export type Decision = "aceptar" | "no" | "negociar" | "parcial";
 
 export type SafetyLevel = "rojo" | "amarillo" | "verde";
 
-export type InclineLevel = "muy_alta" | "alta" | "media" | "normal";
+export type InclineLevel = "muy_alta" | "alta" | "media" | "plana";
 
 export type DriverMode = "saliendo" | "en_zona_prime" | "retornando";
 
@@ -45,6 +45,8 @@ export interface Evaluation {
   safety: SafetyLevel | null;
   incline: InclineLevel | null;
   priority: string | null;
+  sector?: string | null;
+  suggested?: { oferta: number | null; justo: number | null; extra: number | null } | null;
 }
 
 export interface Analysis {

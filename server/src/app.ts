@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyze, completeTrips, type RouteLookup } from "./analyze.ts";
+import { GeminiError, judgeImage, judgeWithGemini, transcribeImage, type CaptureImage } from "./gemini.ts";
 import { applyContext, parseDriverContext } from "./modes.ts";
+import type { Analysis } from "./types.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -32,7 +34,18 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-export function createApp(options?: { routes?: RouteLookup }) {
+function captureImage(value: { mime?: unknown; data?: unknown } | undefined): CaptureImage | null {
+  const mime = typeof value?.mime === "string" ? value.mime : "";
+  const data = typeof value?.data === "string" ? value.data : "";
+  if (!mime.startsWith("image/") || data.length < 16) return null;
+  return { mime, data };
+}
+
+export function createApp(options?: {
+  routes?: RouteLookup;
+  geminiApiKey?: string;
+  fetchImpl?: typeof fetch;
+}) {
   const indexHtml = readFileSync(join(root, "public/index.html"));
   const fixturesDir = join(root, "test/fixtures");
 
@@ -56,21 +69,77 @@ export function createApp(options?: { routes?: RouteLookup }) {
       json(res, 200, { id, text: readFileSync(join(fixturesDir, found.file), "utf8") });
       return;
     }
-    if (req.method === "POST" && url.pathname === "/api/analyze") {
-      let payload: { text?: unknown; context?: unknown; at?: unknown };
+    if (req.method === "POST" && url.pathname === "/api/ocr") {
+      let payload: { mime?: unknown; data?: unknown };
       try {
-        payload = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; at?: unknown };
+        payload = JSON.parse(await readBody(req)) as { mime?: unknown; data?: unknown };
       } catch {
         json(res, 400, { error: "JSON inválido" });
         return;
       }
-      if (typeof payload.text !== "string" || payload.text.trim() === "") {
+      const mime = typeof payload.mime === "string" ? payload.mime : "";
+      const data = typeof payload.data === "string" ? payload.data : "";
+      if (!mime.startsWith("image/") || data.length < 16 || data.length > 12_000_000) {
+        json(res, 400, { error: "La imagen no sirve" });
+        return;
+      }
+      if (!options?.geminiApiKey) {
+        json(res, 502, { error: "Falta GEMINI_API_KEY" });
+        return;
+      }
+      try {
+        const text = await transcribeImage(options.geminiApiKey, mime, data, options.fetchImpl);
+        if (!text) {
+          json(res, 502, { error: "La imagen no produjo texto" });
+          return;
+        }
+        json(res, 200, { text });
+      } catch (error) {
+        const message = error instanceof GeminiError ? error.message : "Gemini no respondió";
+        json(res, 502, { error: message });
+      }
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/analyze") {
+      let payload: {
+        text?: unknown;
+        context?: unknown;
+        at?: unknown;
+        ocr?: unknown;
+        compacto?: unknown;
+        image?: { mime?: unknown; data?: unknown };
+      };
+      try {
+        payload = JSON.parse(await readBody(req)) as typeof payload;
+      } catch {
+        json(res, 400, { error: "JSON inválido" });
+        return;
+      }
+      const image = captureImage(payload.image);
+      const remote = payload.ocr !== "local";
+      const compact = payload.compacto === true;
+      const text = typeof payload.text === "string" ? payload.text : "";
+      if (text.trim() === "" && !(remote && image)) {
         json(res, 400, { error: "Falta el texto" });
         return;
       }
-      let analysis = await completeTrips(analyze(payload.text), options?.routes);
       const context = parseDriverContext(payload.context);
-      if (context) {
+      let analysis: Analysis;
+      try {
+        const parsed = analyze(text);
+        if (image && options?.geminiApiKey && (remote || parsed.offers.length === 0)) {
+          analysis = await judgeImage(context, options.geminiApiKey, image, options.fetchImpl, compact);
+        } else if (options?.geminiApiKey) {
+          analysis = await judgeWithGemini(parsed, context, options.geminiApiKey, options.fetchImpl, image, compact);
+        } else {
+          analysis = await completeTrips(parsed, options?.routes);
+        }
+      } catch (error) {
+        const message = error instanceof GeminiError ? error.message : "Gemini no respondió";
+        json(res, 502, { error: message });
+        return;
+      }
+      if (context && !compact) {
         const now = typeof payload.at === "string" ? new Date(payload.at) : new Date();
         analysis = applyContext(analysis, context, Number.isNaN(now.getTime()) ? new Date() : now);
       }

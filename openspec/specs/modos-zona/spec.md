@@ -6,7 +6,7 @@ El panel aplica el modo del conductor, la zona prime, la seguridad configurada y
 
 ### Requirement: Modo y zona prime
 
-El conductor SHALL elegir `saliendo`, `en zona prime` o `retornando`. Las zonas juntas iniciales SHALL ser Poblado, Belén, Envigado, Itagüí y Sabaneta. SHALL existir una lista aparte de zona alejada. En `en zona prime`, si el destino queda fuera de esas listas, o la carrera salta de la zona junta a la alejada, la decisión SHALL ser `no`. En `saliendo`, un destino dentro de la zona prime SHALL marcar prioridad `Alta (Zona prime)`. En `retornando`, un destino que menciona la casa SHALL marcar `Alta (Retorno a casa)`.
+El conductor SHALL elegir `saliendo`, `en zona prime` o `retornando`. Las zonas juntas iniciales SHALL ser Itagüí, Sabaneta, Poblado, Laureles, Belén y Envigado. SHALL existir una lista aparte de zona alejada. En `en zona prime`, si el destino queda fuera de esas listas, o la carrera salta de la zona junta a la alejada, la decisión SHALL ser `no`. En `saliendo`, un destino dentro de la zona prime SHALL marcar prioridad `Alta (Zona prime)`. En `retornando`, un destino que menciona la casa SHALL marcar `Alta (Retorno a casa)`.
 
 #### Scenario: Destino fuera de la zona prime
 - **WHEN** el modo es `en zona prime` y el destino es Nazaret
@@ -42,7 +42,7 @@ De lunes a viernes, de 06:00 a 09:00 y de 17:00 a 20:00, hora de Bogotá, una de
 
 ### Requirement: Inclinación registrada
 
-La inclinación MUST NOT inventarse por elevación ni por el nombre del barrio. Solo una zona operativa con `pendiente` escrita, cuya geometría cruza la ruta, SHALL fijarla. `alta` o `muy_alta` SHALL decidir `no`. Si no hay esa zona, la inclinación SHALL mostrarse como `Sin evaluación`.
+La inclinación MUST NOT inventarse por elevación ni por el nombre del barrio. Solo una zona operativa con `pendiente` escrita, cuya geometría cruza la ruta, SHALL fijarla. Los valores SHALL ser `muy_alta`, `alta`, `media` o `plana`. `muy_alta` SHALL decidir `no`. `alta` SHALL decidir `negociar` y MUST NOT decidir `no` por la pendiente sola. Si no hay esa zona, la inclinación SHALL mostrarse como `Sin evaluación`.
 
 #### Scenario: Sin pendiente medida
 - **WHEN** ninguna zona operativa cruza la ruta

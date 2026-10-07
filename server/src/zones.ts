@@ -7,6 +7,7 @@ import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import buffer from "@turf/buffer";
 import { lineString, point, polygon } from "@turf/helpers";
 import length from "@turf/length";
+import { canonicalIncline, decisionForIncline } from "./thresholds.ts";
 import type { Evaluation, InclineLevel, SafetyLevel } from "./types.ts";
 
 export interface LineGeometry {
@@ -42,7 +43,6 @@ export interface ZoneHit {
   porcentaje: number;
 }
 
-const slopes = new Set<InclineLevel>(["normal", "media", "alta", "muy_alta"]);
 const safeties = new Set<SafetyLevel>(["rojo", "amarillo"]);
 const zonesPath = join(dirname(fileURLToPath(import.meta.url)), "../data/zonas.geojson");
 
@@ -94,7 +94,7 @@ export function operationalFeatures(collection: ZoneCollection): ZoneFeature[] {
     if (props.modo != null && props.modo !== "operativa") return false;
     if (!geometryOk(feature)) return false;
     const safety = safeties.has(props.seguridad as SafetyLevel);
-    const slope = slopes.has(props.pendiente as InclineLevel);
+    const slope = canonicalIncline(props.pendiente) != null;
     return safety || slope;
   });
 }
@@ -153,7 +153,7 @@ export function zonesOnRoute(line: LineGeometry, zones: ZoneFeature[]): ZoneHit[
     hits.push({
       nombre: props.nombre?.trim() || "Zona",
       seguridad: safeties.has(props.seguridad as SafetyLevel) ? (props.seguridad as SafetyLevel) : null,
-      pendiente: slopes.has(props.pendiente as InclineLevel) ? (props.pendiente as InclineLevel) : null,
+      pendiente: canonicalIncline(props.pendiente),
       metros: measured.meters,
       porcentaje: measured.porcentaje,
     });
@@ -165,7 +165,7 @@ function rankSlope(level: InclineLevel | null): number {
   if (level === "muy_alta") return 4;
   if (level === "alta") return 3;
   if (level === "media") return 2;
-  if (level === "normal") return 1;
+  if (level === "plana") return 1;
   return 0;
 }
 
@@ -198,13 +198,13 @@ export function decideAgainstZones(item: Evaluation, hits: ZoneHit[]): Evaluatio
     return rankSlope(hit.pendiente) > rankSlope(worst) ? hit.pendiente : worst;
   }, item.incline);
   const reason = motive(hits);
-  const blocks = safety === "rojo" || incline === "alta" || incline === "muy_alta";
+  const decision = decisionForIncline(item.decision, incline, safety);
   return {
     ...item,
     safety,
     incline,
-    decision: blocks ? "no" : item.decision,
-    partial: blocks ? false : item.partial,
+    decision,
+    partial: decision === "no" ? false : item.partial,
     reasons: reason && !item.reasons.includes(reason) ? [...item.reasons, reason] : item.reasons,
   };
 }

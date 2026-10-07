@@ -14,6 +14,15 @@
     h2 { margin: 0 0 12px; font-size: 16px; }
     .fixtures { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     button { border: 0; border-radius: 8px; padding: 8px 12px; background: #e7e7ea; cursor: pointer; }
+    button.trial { background: #fff7e6; outline: 1px dashed #c48a00; }
+    .ocr { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .preview { display: none; width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+    .preview.show { display: block; }
+    #ocr-status.busy { color: #8a5a00; }
+    #ocr-status.busy::after { content: ""; display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: #c48a00; animation: pulse 0.8s infinite; }
+    #ocr-status.done { color: #0d6b3c; }
+    #elapsed, #elapsed-ia { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4.5em; }
+    @keyframes pulse { 50% { opacity: 0.2; } }
     button.primary { background: #111; color: #fff; }
     textarea { width: 100%; min-height: 320px; box-sizing: border-box; border: 1px solid #d0d0d4; border-radius: 8px; padding: 10px; font: 13px/1.4 ui-monospace, monospace; }
     .error { color: #9b1c1c; }
@@ -48,11 +57,29 @@
         <label for="home">Casa</label>
         <input id="home" type="text" placeholder="Barrio o municipio">
         <label for="prime">Zona prime</label>
-        <input id="prime" type="text" value="Poblado, Belén, Envigado, Itagüí, Sabaneta">
+        <input id="prime" type="text" value="Itagüí, Sabaneta, Poblado, Laureles, Belén, Envigado">
         <label for="distant">Zona alejada</label>
         <input id="distant" type="text" placeholder="Opcional, separada por comas">
       </div>
       <div id="fixtures" class="fixtures"></div>
+      <div class="ocr">
+        <label for="ocr-mode">OCR</label>
+        <select id="ocr-mode">
+          <option value="remoto" selected>Remoto</option>
+          <option value="local">Local</option>
+        </select>
+        <label for="compacto">Compacto</label>
+        <select id="compacto">
+          <option value="false" selected>false</option>
+          <option value="true">true</option>
+        </select>
+        <button id="ocr" class="trial" type="button">Imagen (prueba)</button>
+        <input id="image" type="file" accept="image/*" hidden>
+        <img id="preview" class="preview" alt="">
+        <span id="ocr-status"></span>
+        <span id="elapsed"></span>
+        <span id="elapsed-ia" hidden></span>
+      </div>
       <textarea id="text" placeholder="Texto OCR"></textarea>
       <p><button id="analyze" class="primary" type="button">Analizar</button></p>
       <p id="error" class="error"></p>
@@ -76,7 +103,7 @@
     const decisions = { aceptar: "Aceptar", negociar: "Negociar", parcial: "Parcial", no: "No" };
     const labels = { oferta: "Oferta", justo: "Justo", optimo: "Óptimo" };
     const safety = { rojo: "Rojo", amarillo: "Amarillo", verde: "Verde" };
-    const incline = { muy_alta: "Muy alta", alta: "Alta", media: "Media", normal: "Normal" };
+    const incline = { muy_alta: "Muy alta", alta: "Alta", media: "Media", plana: "Plana" };
     const money = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
     function line(label, value) {
@@ -105,8 +132,18 @@
         result.append(empty);
         return;
       }
+      const compact = document.querySelector("#compacto").value === "true";
       for (const item of data.offers) {
         const card = document.createElement("article");
+        if (compact) {
+          card.append(line("Origen", item.offer.origin));
+          card.append(line("Destino", item.offer.destination));
+          card.append(evaluated("Sector", item.sector));
+          card.append(evaluated("Seguridad", safety[item.safety]));
+          card.append(evaluated("Inclinación", incline[item.incline]));
+          result.append(card);
+          continue;
+        }
         const badge = document.createElement("span");
         badge.className = "decision " + item.decision;
         badge.textContent = decisions[item.decision] || item.decision;
@@ -121,8 +158,14 @@
         card.append(line("Destino", offer.destination));
         card.append(line("Precio/km", item.pricePerKm == null ? null : money.format(item.pricePerKm)));
         card.append(line("Etiqueta", labels[item.priceLabel] || null));
-        card.append(evaluated("Seguridad", safety[item.safety]));
+        const safetyText = item.safety ? safety[item.safety] + (item.sector ? " (" + item.sector + ")" : "") : null;
+        card.append(evaluated("Seguridad", safetyText));
         card.append(evaluated("Inclinación", incline[item.incline]));
+        if (item.suggested) {
+          const quote = item.suggested;
+          const bit = (label, amount) => label + ": " + (amount == null ? "sin dato" : money.format(amount));
+          card.append(line("Precios", [bit("Oferta", quote.oferta), bit("Justo", quote.justo), bit("Extra", quote.extra)].join(" | ")));
+        }
         card.append(line("Prioridad", item.priority));
         if (item.reasons.length) card.append(line("Motivo", item.reasons.join(". ")));
         result.append(card);
@@ -142,6 +185,7 @@
           const loaded = await fetch("/api/fixtures/" + item.id);
           const payload = await loaded.json();
           text.value = payload.text;
+          capture = null;
           await analyze();
         });
         box.append(button);
@@ -152,8 +196,44 @@
       return value.split(",").map((item) => item.trim()).filter(Boolean);
     }
 
+    let clockStart = 0;
+    let clockTimer = 0;
+    let clockLabel = "";
+    const elapsed = document.querySelector("#elapsed");
+    const elapsedIa = document.querySelector("#elapsed-ia");
+    let clockNode = elapsed;
+    function paintClock() {
+      const value = ((performance.now() - clockStart) / 1000).toFixed(1) + " s";
+      clockNode.textContent = clockLabel ? clockLabel + " " + value : value;
+    }
+    function startClock(node, label) {
+      if (clockStart) return false;
+      clockNode = node || elapsed;
+      clockLabel = label || "";
+      if (clockNode === elapsed && !clockLabel) {
+        elapsedIa.hidden = true;
+        elapsedIa.textContent = "";
+      }
+      clockStart = performance.now();
+      paintClock();
+      clockTimer = setInterval(paintClock, 100);
+      return true;
+    }
+    function stopClock(owned) {
+      if (!owned || !clockStart) return;
+      clearInterval(clockTimer);
+      paintClock();
+      clockStart = 0;
+    }
+    function localOcr() {
+      return document.querySelector("#ocr-mode").value === "local";
+    }
+
     async function analyze() {
+      const owned = startClock(localOcr() ? elapsedIa : elapsed, localOcr() ? "IA" : "");
+      if (localOcr()) elapsedIa.hidden = false;
       error.textContent = "";
+      try {
       const prime = splitZones(document.querySelector("#prime").value);
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -165,7 +245,10 @@
             home: document.querySelector("#home").value,
             contiguousZones: prime.length ? prime : undefined,
             distantZones: splitZones(document.querySelector("#distant").value)
-          }
+          },
+          ocr: document.querySelector("#ocr-mode").value,
+          compacto: document.querySelector("#compacto").value === "true",
+          image: capture
         })
       });
       const payload = await response.json();
@@ -175,8 +258,79 @@
         return;
       }
       render(payload);
+      } finally {
+        stopClock(owned);
+      }
     }
 
+    let capture = null;
+    const image = document.querySelector("#image");
+    const preview = document.querySelector("#preview");
+    const ocrStatus = document.querySelector("#ocr-status");
+    document.querySelector("#ocr").addEventListener("click", () => image.click());
+    image.addEventListener("change", async () => {
+      const file = image.files && image.files[0];
+      image.value = "";
+      if (!file) return;
+      const local = localOcr();
+      const owned = startClock(elapsed, local ? "Extracción" : "");
+      if (local) {
+        elapsedIa.hidden = false;
+        elapsedIa.textContent = "";
+      }
+      error.textContent = "";
+      try {
+      preview.src = URL.createObjectURL(file);
+      preview.classList.add("show");
+      ocrStatus.className = "busy";
+      ocrStatus.textContent = "Leyendo imagen";
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("lectura"));
+        reader.readAsDataURL(file);
+      });
+      const encoded = String(dataUrl);
+      const comma = encoded.indexOf(",");
+      capture = { mime: file.type || "image/jpeg", data: encoded.slice(comma + 1) };
+      if (!local) {
+        text.value = "";
+        ocrStatus.textContent = "Enviando imagen";
+        await analyze();
+        if (!error.textContent) {
+          ocrStatus.className = "done";
+          ocrStatus.textContent = "Listo";
+        }
+        return;
+      }
+      ocrStatus.textContent = "Extrayendo texto";
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mime: file.type || "image/jpeg", data: encoded.slice(comma + 1) }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        ocrStatus.className = "";
+        ocrStatus.textContent = "";
+        error.textContent = payload.error || "No se pudo leer la imagen";
+        return;
+      }
+      text.value = payload.text;
+      stopClock(owned);
+      ocrStatus.className = "busy";
+      ocrStatus.textContent = "Completando campos";
+      await analyze();
+      if (!error.textContent) {
+        ocrStatus.className = "done";
+        ocrStatus.textContent = "Texto listo";
+      }
+      } catch {
+        error.textContent = "No se pudo leer la imagen";
+      } finally {
+        stopClock(owned);
+      }
+    });
     document.querySelector("#analyze").addEventListener("click", analyze);
     loadFixtures();
   </script>

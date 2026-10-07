@@ -157,7 +157,7 @@ describe("zonas por geometría", () => {
     assert.equal(kept.safety, null);
   });
 
-  it("la pendiente alta rechaza y la amarilla no", () => {
+  it("la pendiente alta se negocia y la amarilla no", () => {
     const slope = judged([
       feature(
         { nombre: "Subida", modo: "operativa", activo: true, pendiente: "alta" },
@@ -165,7 +165,7 @@ describe("zonas por geometría", () => {
       ),
     ]);
     assert.equal(slope.incline, "alta");
-    assert.equal(slope.decision, "no");
+    assert.equal(slope.decision, "negociar");
     assert.equal(slope.reasons.at(-1), "Pendiente alta: Subida");
 
     const yellow = judged([

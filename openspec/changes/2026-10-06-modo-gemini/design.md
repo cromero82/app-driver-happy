@@ -11,9 +11,10 @@
 ## Decisions
 
 - Rama de trabajo: `google-ia`. `main` no se toca en esta sesión.
-- Modelo: Gemini, API de Google. La variable de entorno se define al implementar, cuando la clave exista.
+- Modelo: Gemini, API de Google. La clave va en `server/.env` como `GEMINI_API_KEY`. Ese archivo no se versiona. `npm start` lo lee solo.
 - El resultado no es repetible. Dos análisis del mismo texto pueden diferir.
-- Un campo que Gemini no trae queda vacío o en `Sin evaluación`. No se inventa verde, normal, ni un km.
+- Un campo que Gemini no trae queda vacío o en `Sin evaluación`. No se inventa verde, plana, ni un km.
+- Inclinación: muy alta, alta, media o plana. Muy alta decide no. Alta decide negociar.
 - Aceptar sigue siendo manual.
 
 ## Non-goals

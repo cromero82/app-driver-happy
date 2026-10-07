@@ -2,7 +2,7 @@
 
 ### Requirement: Ciudad y campos del asistente
 
-La ciudad por defecto SHALL ser Medellín. Cada oferta evaluada SHALL poder mostrar aceptar (`aceptar`, `no`, `negociar` o `parcial`), distancia recogida y viaje, seguridad (rojo, amarillo, verde), inclinación (muy alta, alta, media, normal), precio (`oferta`, `justo`, `optimo`) y prioridad con motivo, por ejemplo `Alta (Retorno a casa)`.
+La ciudad por defecto SHALL ser Medellín. Cada oferta evaluada SHALL poder mostrar aceptar (`aceptar`, `no`, `negociar` o `parcial`), distancia recogida y viaje, seguridad (rojo, amarillo, verde), inclinación (muy alta, alta, media, plana), precio (`oferta`, `justo`, `optimo`) y prioridad con motivo, por ejemplo `Alta (Retorno a casa)`.
 
 #### Scenario: Campos pedidos en el requisito
 - **WHEN** se consulta el contrato del asistente
@@ -22,7 +22,7 @@ El conductor SHALL poder estar en `saliendo`, `en zona prime` o `retornando`. En
 
 ### Requirement: Seguridad e inclinación
 
-Seguridad roja, o inclinación alta o muy alta, SHALL decidir `no`. La seguridad SHALL salir de zonas configuradas por el conductor, con nivel distinto de día y de noche, y SHALL presentarse como configuración, no como garantía. La inclinación SHALL calcularse con la elevación de la ruta en los dos tramos. En `main`, MUST NOT usarse un modelo generativo para seguridad ni para pendiente. En `google-ia`, Gemini SHALL decidir; ese contrato está en `openspec/changes/2026-10-06-modo-gemini/`.
+Seguridad roja, o inclinación muy alta, SHALL decidir `no`. Inclinación alta SHALL decidir `negociar`. La seguridad SHALL salir de zonas configuradas por el conductor, con nivel distinto de día y de noche, y SHALL presentarse como configuración, no como garantía. La inclinación SHALL calcularse con la elevación de la ruta en los dos tramos. En `main`, MUST NOT usarse un modelo generativo para seguridad ni para pendiente. En `google-ia`, Gemini SHALL decidir; ese contrato está en `openspec/changes/2026-10-06-modo-gemini/`.
 
 #### Scenario: Zona roja
 - **WHEN** la zona configurada es roja

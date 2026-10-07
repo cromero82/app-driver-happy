@@ -17,7 +17,7 @@ Conductor en Medellín. Las ofertas duran segundos. Uber, inDrive y DiDi no comp
 - inDrive no trae el km del viaje: se calcula con las dos direcciones. Hasta entonces el resultado sigue parcial.
 - Si DiDi muestra `1,2x` o `x1,3`, ese recargo ya está en el precio y no se vuelve a endurecer por hora pico.
 - Seguridad por zonas que configura el conductor (rojo, amarillo, verde, y por horario). Pendiente por elevación de la ruta, en los dos tramos (GPS a recogida, y recogida a destino).
-- Rojo, o inclinación alta, decide No. El conductor acepta a mano en la app de la carrera.
+- Rojo, o inclinación muy alta, decide No. Inclinación alta decide negociar. El conductor acepta a mano en la app de la carrera.
 
 ## Non-goals
 

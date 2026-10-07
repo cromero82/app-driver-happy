@@ -10,7 +10,7 @@
 
 ### Requirement: Decisión de Gemini
 
-Gemini SHALL leer el texto de la captura y el contexto del conductor, y SHALL devolver los campos cortos del panel: decisión, distancia, seguridad, inclinación, precio y prioridad. La misma captura MUST NOT exigir la misma decisión en dos análisis. Un campo ausente en la respuesta SHALL quedar vacío o en `Sin evaluación`. MUST NOT inventarse un kilómetro, un verde ni una inclinación normal.
+Gemini SHALL leer el texto de la captura y el contexto del conductor, y SHALL devolver los campos cortos del panel: decisión, distancia, seguridad, inclinación, precio y prioridad. La misma captura MUST NOT exigir la misma decisión en dos análisis. Un campo ausente en la respuesta SHALL quedar vacío o en `Sin evaluación`. MUST NOT inventarse un kilómetro, un verde ni una inclinación plana.
 
 #### Scenario: Texto ya probado a mano
 - **WHEN** el conductor pega una captura que hoy resuelve con Gemini
@@ -19,6 +19,18 @@ Gemini SHALL leer el texto de la captura y el contexto del conductor, y SHALL de
 #### Scenario: Respuesta incompleta
 - **WHEN** Gemini no trae la seguridad o la inclinación
 - **THEN** ese campo queda en `Sin evaluación`
+
+### Requirement: Inclinación
+
+La inclinación SHALL ser `muy_alta`, `alta`, `media` o `plana`. `muy_alta` SHALL decidir `no`. `alta` SHALL decidir `negociar` y MUST NOT decidir `no` por la inclinación sola. `media` y `plana` MUST NOT cambiar la decisión por sí solas.
+
+#### Scenario: Inclinación muy alta
+- **WHEN** la inclinación es muy alta y el precio permitiría aceptar
+- **THEN** la decisión es `no`
+
+#### Scenario: Inclinación alta
+- **WHEN** la inclinación es alta y ninguna otra regla decide `no`
+- **THEN** la decisión es `negociar`
 
 ### Requirement: Clave pendiente
 
