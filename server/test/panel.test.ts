@@ -37,6 +37,7 @@ describe("panel local", () => {
       assert.match(html, /id="elapsed-ia"/);
       assert.match(html, /Extracción/);
       assert.match(html, /id="compacto"/);
+      assert.match(html, /AndroidConfig/);
       assert.doesNotMatch(html, /Zona roja/);
 
       const fixtures = await fetch(base + "/api/fixtures");

@@ -1,3 +1,4 @@
+import { networkInterfaces } from "node:os";
 import { createApp } from "./app.ts";
 import { loadLocalEnv } from "./local-env.ts";
 import { routeLookupFromEnv } from "./route-provider.ts";
@@ -13,8 +14,14 @@ server.on("error", (error: NodeJS.ErrnoException) => {
   }
   throw error;
 });
-server.listen(port, "127.0.0.1", () => {
+const host = process.env.HOST ?? "0.0.0.0";
+server.listen(port, host, () => {
   console.log(`http://127.0.0.1:${port}`);
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      if (String(entry.family) === "IPv4" && !entry.internal) console.log(`Teléfono: http://${entry.address}:${port}`);
+    }
+  }
   if (process.env.GEMINI_API_KEY) console.log("Gemini activo");
   if (process.env.MAPBOX_ACCESS_TOKEN) console.log("Rutas Mapbox activas");
   else if (process.env.OPENROUTESERVICE_API_KEY) console.log("Rutas OpenRouteService activas");

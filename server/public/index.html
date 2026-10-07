@@ -551,6 +551,23 @@
       if (text.value.trim() || capture) analyze();
     });
     document.querySelector("#clear").addEventListener("click", clearPanel);
+    function publishAndroidConfig() {
+      if (!window.AndroidConfig) return;
+      const prime = splitZones(document.querySelector("#prime").value);
+      AndroidConfig.save(JSON.stringify({
+        mode: document.querySelector("#mode").value,
+        home: document.querySelector("#home").value,
+        contiguousZones: prime,
+        distantZones: splitZones(document.querySelector("#distant").value),
+        compacto: document.querySelector("#compacto").value === "true"
+      }));
+    }
+    for (const id of ["mode", "home", "prime", "distant", "ocr-mode", "compacto"]) {
+      const node = document.querySelector("#" + id);
+      node.addEventListener("change", publishAndroidConfig);
+      node.addEventListener("input", publishAndroidConfig);
+    }
+    publishAndroidConfig();
     loadFixtures();
   </script>
 </body>
