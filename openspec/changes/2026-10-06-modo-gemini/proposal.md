@@ -5,8 +5,8 @@ El motor de `main` (geocodificación, ruta y `zonas.geojson`) no sostuvo la deci
 ## What Changes
 
 - La próxima sesión trabaja solo en `google-ia`.
-- Gemini lee el OCR y devuelve los campos cortos del panel.
-- La clave de la API de Google todavía no está comprada. Hasta que exista, esta rama no vuelve al motor de `main` para completar la decisión.
+- Gemini lee la captura, en remoto o en local, y devuelve los campos cortos del panel. `compacto` deja solo origen, destino, sector, seguridad e inclinación.
+- La clave está en `server/.env` como `GEMINI_API_KEY`. Sin ella, esta rama no vuelve al motor de `main` para completar la decisión.
 - `main` no adopta este modo.
 
 ## Capabilities
